@@ -1,0 +1,19 @@
+seed: 42
+data:
+  kaggle_dataset: nikhilpandey360/chest-xray-masks-and-labels
+  raw_dir: data/raw
+  cache_path: data/cache_256.npz
+  size: 256
+  val_fraction: 0.15
+model:
+  arch: unet
+  encoder: resnet34
+  encoder_weights: imagenet
+train:
+  epochs: 25
+  batch_size: 16
+  lr: 3.0e-4
+  weight_decay: 1.0e-4
+  num_workers: 0
+outputs_dir: outputs
+threshold: 0.5
