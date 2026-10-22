@@ -1,12 +1,12 @@
 # lung-seg-cxr
 
-Segmentação dos pulmões em raio-X de tórax com uma U-Net (encoder ResNet34 pré-treinado no ImageNet), separação em pulmão direito e esquerdo e cálculo da razão entre as áreas (D/E).
+Lung segmentation on chest X-rays with a U-Net (ResNet34 encoder pretrained on ImageNet), split into right and left lung, and the ratio between their areas (R/L).
 
-![Segmentação de pulmão direito (D, azul) e esquerdo (E, verde) em raio-X das bases Montgomery e Shenzhen](docs/showcase.png)
+![Right lung (D, blue) and left lung (E, green) segmented on X-rays from the Montgomery and Shenzhen sets](docs/showcase.png)
 
-> **Projeto educacional. Não é um dispositivo médico e não deve ser usado para diagnóstico ou qualquer decisão clínica.**
+> **Educational project. It is not a medical device and must not be used for diagnosis or any clinical decision.**
 
-## Setup (Mac com Apple Silicon)
+## Setup (Apple Silicon Mac)
 
 ```bash
 python3 -m venv .venv
@@ -14,68 +14,71 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
-Roda também em CUDA e CPU sem mudar nada: o dispositivo é escolhido automaticamente (cuda > mps > cpu).
+It also runs on CUDA and CPU with no changes: the device is picked automatically (cuda > mps > cpu).
 
-O dataset vem do Kaggle (`nikhilpandey360/chest-xray-masks-and-labels`). Se o download pedir autenticação, salve o token de https://www.kaggle.com/settings em `~/.kaggle/kaggle.json` ou exporte `KAGGLE_USERNAME` e `KAGGLE_KEY`. Também dá para baixar manualmente e usar `lungseg prepare --raw-dir PASTA`.
+The dataset comes from Kaggle (`nikhilpandey360/chest-xray-masks-and-labels`). If the download asks for authentication, save the token from https://www.kaggle.com/settings to `~/.kaggle/kaggle.json` or export `KAGGLE_USERNAME` and `KAGGLE_KEY`. You can also download it manually and run `lungseg prepare --raw-dir FOLDER`.
 
-## Comandos
+## Commands
 
-| Comando | O que faz | Saídas |
+| Command | What it does | Outputs |
 |---|---|---|
-| `lungseg prepare` | baixa o dataset, pareia imagens e máscaras, gera cache e split | `data/cache_256.npz`, `outputs/split.json` |
-| `lungseg train` | treina e salva o melhor checkpoint (Dice de validação) | `outputs/best.pt`, `outputs/train_log.csv`, `outputs/curves.png` |
-| `lungseg evaluate` | Dice bruto e pós-processado, erro da razão D/E | `outputs/eval.csv`, `outputs/ratio_scatter.png`, `outputs/best_worst.png` |
-| `lungseg explore` | razão D/E nas máscaras anotadas por fonte e rótulo de TB | `outputs/explore.csv`, `outputs/ratio_boxplot.png` |
-| `lungseg predict IMG [--out PATH]` | segmenta uma imagem e imprime áreas e razão | overlay PNG |
-| `lungseg app [--share]` | demo Gradio em http://localhost:7860 | |
+| `lungseg prepare` | downloads the dataset, pairs images with masks, builds the cache and the split | `data/cache_256.npz`, `outputs/split.json` |
+| `lungseg train` | trains and saves the best checkpoint (by validation Dice) | `outputs/best.pt`, `outputs/train_log.csv`, `outputs/curves.png` |
+| `lungseg evaluate` | raw and post-processed Dice, R/L ratio error | `outputs/eval.csv`, `outputs/ratio_scatter.png`, `outputs/best_worst.png` |
+| `lungseg explore` | R/L ratio on the annotated masks by source and TB label | `outputs/explore.csv`, `outputs/ratio_boxplot.png` |
+| `lungseg predict IMG [--out PATH]` | segments one image and prints the areas and the ratio | overlay PNG |
+| `lungseg app [--share]` | Gradio demo at http://localhost:7860 | |
 
-Qualquer chave de `configs/default.yaml` pode ser sobrescrita pela CLI, por exemplo `lungseg train --epochs 1 --batch-size 8`. Testes: `pytest`.
+Any key in `configs/default.yaml` can be overridden from the CLI, for example `lungseg train --epochs 1 --batch-size 8`. Tests: `pytest`.
 
-## Convenção radiológica
+## Radiological convention
 
-Num raio-X frontal (PA) o paciente aparece como se estivesse de frente para quem olha. Por isso **o pulmão do lado esquerdo da imagem é o pulmão direito do paciente**. No projeto, D = direito e E = esquerdo sempre se referem ao paciente; no overlay, azul = direito e verde = esquerdo.
+On a frontal (PA) X-ray the patient faces the viewer. So **the lung on the left side of the image is the patient's right lung**. Right and left always refer to the patient. The overlays and the program output use the Portuguese initials: **D** (*direito*) = right, in blue, and **E** (*esquerdo*) = left, in green.
 
-Pelo mesmo motivo, o treino **não usa flip horizontal** como aumento de dados: espelhar a imagem trocaria a anatomia de lado.
+For the same reason, training **does not use horizontal flips** as data augmentation: mirroring the image would swap the anatomy's sides.
 
-O pós-processamento mantém as duas maiores regiões conexas da máscara prevista e as ordena pela posição horizontal do centróide.
+Post-processing keeps the two largest connected regions of the predicted mask and orders them by the horizontal position of their centroid.
 
-## Resultados
+## Results
 
-| Métrica (validação) | Valor |
+| Metric (validation) | Value |
 |---|---|
-| Dice (bruto) | 0,961 |
-| Dice (pós-processado) | 0,961 |
-| Erro absoluto médio da razão D/E | 0,074 |
+| Dice (raw) | 0.961 |
+| Dice (post-processed) | 0.961 |
+| Mean absolute R/L ratio error | 0.074 |
 
-U-Net com encoder ResNet34, 25 épocas em um Mac Apple Silicon (MPS), cerca de 30 segundos por época (~13 minutos no total); melhor checkpoint na época 20. 106 imagens de validação.
+U-Net with a ResNet34 encoder, 25 epochs on an Apple Silicon Mac (MPS), about 30 seconds per epoch (~13 minutes total); best checkpoint at epoch 20. 106 validation images.
 
-![Loss de treino e Dice de validação por época](docs/curves.png)
+![Training loss and validation Dice per epoch](docs/curves.png)
 
-### Comparação de arquiteturas
+### Architecture comparison
 
-Mesmo encoder (ResNet34 ImageNet), mesmo split, mesma seed e 25 épocas para todas.
+Same encoder (ResNet34, ImageNet), same split, same seed and 25 epochs for all of them.
 
-| Arquitetura | Parâmetros | Dice médio | Dice mediano | Pior Dice | Erro médio da razão D/E | Melhor época | Tempo de treino |
+| Architecture | Parameters | Mean Dice | Median Dice | Worst Dice | Mean R/L ratio error | Best epoch | Training time |
 |---|---|---|---|---|---|---|---|
-| U-Net | 24,4 M | 0,961 | 0,971 | 0,822 | 0,074 | 20 | ~13 min |
-| U-Net++ | 26,1 M | 0,962 | 0,972 | 0,815 | 0,076 | 15 | ~21 min |
+| U-Net | 24.4 M | 0.961 | 0.971 | 0.822 | 0.074 | 20 | ~13 min |
+| U-Net++ | 26.1 M | 0.962 | 0.972 | 0.815 | 0.076 | 15 | ~21 min |
+| UNet 3+ | 27.8 M | 0.962 | 0.972 | 0.798 | 0.075 | 17 | ~48 min |
 
-A U-Net++ ganha 0,001 de Dice e custa cerca de 60% mais tempo de treino. Com uma única seed e 106 imagens de validação, essa diferença está dentro do ruído: na prática as duas empatam, e a U-Net segue como padrão por ser mais rápida.
+All three are within 0.001 Dice of each other. With a single seed and 106 validation images, that difference is within the noise: in practice they tie. UNet 3+ takes almost 4 times as long as U-Net and has the weakest worst case, so U-Net stays the default because it is the fastest.
 
-Para treinar outra arquitetura sem sobrescrever a atual:
+UNet 3+ is not in `segmentation_models_pytorch`; the implementation is in `src/lungseg/model.py` (class `UNet3Plus`), with the same ResNet34 encoder and without the deep supervision or the classification-guided module of the original paper (Huang et al., 2020). Use `--arch unet3plus`.
+
+To train another architecture without overwriting the current one:
 
 ```bash
 lungseg train --arch unetplusplus --outputs-dir outputs/unetplusplus
 lungseg evaluate --arch unetplusplus --outputs-dir outputs/unetplusplus
 ```
 
-Copie `outputs/split.json` para a nova pasta antes, para avaliar no mesmo conjunto de validação.
+Copy `outputs/split.json` to the new folder first, so it is evaluated on the same validation set.
 
-Figuras em `outputs/`: `curves.png`, `ratio_scatter.png`, `best_worst.png`, `ratio_boxplot.png`.
+Figures in `outputs/`: `curves.png`, `ratio_scatter.png`, `best_worst.png`, `ratio_boxplot.png`.
 
-A análise exploratória (`lungseg explore`) compara a razão D/E entre exames normais e com tuberculose. Fonte, hospital, aparelho e população se confundem com o rótulo, então as diferenças não servem para conclusões clínicas.
+The exploratory analysis (`lungseg explore`) compares the R/L ratio between normal and tuberculosis exams. Source, hospital, scanner and population are confounded with the label, so the differences do not support clinical conclusions.
 
-## Créditos dos dados
+## Data credits
 
-- **Montgomery County X-ray Set** e **Shenzhen Hospital X-ray Set**: National Library of Medicine (NLM/NIH). Jaeger S. et al., "Two public chest X-ray datasets for computer-aided screening of pulmonary diseases", *Quant Imaging Med Surg* 2014;4(6):475-477.
-- Máscaras e organização no Kaggle: `nikhilpandey360/chest-xray-masks-and-labels`.
+- **Montgomery County X-ray Set** and **Shenzhen Hospital X-ray Set**: National Library of Medicine (NLM/NIH). Jaeger S. et al., "Two public chest X-ray datasets for computer-aided screening of pulmonary diseases", *Quant Imaging Med Surg* 2014;4(6):475-477.
+- Masks and organization on Kaggle: `nikhilpandey360/chest-xray-masks-and-labels`.
