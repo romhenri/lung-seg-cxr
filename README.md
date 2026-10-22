@@ -47,9 +47,29 @@ O pós-processamento mantém as duas maiores regiões conexas da máscara previs
 | Dice (pós-processado) | 0,961 |
 | Erro absoluto médio da razão D/E | 0,074 |
 
-25 épocas em um Mac Apple Silicon (MPS), cerca de 1 minuto por época; melhor checkpoint na época 20. 106 imagens de validação.
+U-Net com encoder ResNet34, 25 épocas em um Mac Apple Silicon (MPS), cerca de 30 segundos por época (~13 minutos no total); melhor checkpoint na época 20. 106 imagens de validação.
 
 ![Loss de treino e Dice de validação por época](docs/curves.png)
+
+### Comparação de arquiteturas
+
+Mesmo encoder (ResNet34 ImageNet), mesmo split, mesma seed e 25 épocas para todas.
+
+| Arquitetura | Parâmetros | Dice médio | Dice mediano | Pior Dice | Erro médio da razão D/E | Melhor época | Tempo de treino |
+|---|---|---|---|---|---|---|---|
+| U-Net | 24,4 M | 0,961 | 0,971 | 0,822 | 0,074 | 20 | ~13 min |
+| U-Net++ | 26,1 M | 0,962 | 0,972 | 0,815 | 0,076 | 15 | ~21 min |
+
+A U-Net++ ganha 0,001 de Dice e custa cerca de 60% mais tempo de treino. Com uma única seed e 106 imagens de validação, essa diferença está dentro do ruído: na prática as duas empatam, e a U-Net segue como padrão por ser mais rápida.
+
+Para treinar outra arquitetura sem sobrescrever a atual:
+
+```bash
+lungseg train --arch unetplusplus --outputs-dir outputs/unetplusplus
+lungseg evaluate --arch unetplusplus --outputs-dir outputs/unetplusplus
+```
+
+Copie `outputs/split.json` para a nova pasta antes, para avaliar no mesmo conjunto de validação.
 
 Figuras em `outputs/`: `curves.png`, `ratio_scatter.png`, `best_worst.png`, `ratio_boxplot.png`.
 
