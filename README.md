@@ -2,6 +2,8 @@
 
 Segmentação dos pulmões em raio-X de tórax com uma U-Net (encoder ResNet34 pré-treinado no ImageNet), separação em pulmão direito e esquerdo e cálculo da razão entre as áreas (D/E).
 
+![Segmentação de pulmão direito (D, azul) e esquerdo (E, verde) em raio-X das bases Montgomery e Shenzhen](docs/showcase.png)
+
 > **Projeto educacional. Não é um dispositivo médico e não deve ser usado para diagnóstico ou qualquer decisão clínica.**
 
 ## Setup (Mac com Apple Silicon)
@@ -46,6 +48,8 @@ O pós-processamento mantém as duas maiores regiões conexas da máscara previs
 | Erro absoluto médio da razão D/E | 0,074 |
 
 25 épocas em um Mac Apple Silicon (MPS), cerca de 1 minuto por época; melhor checkpoint na época 20. 106 imagens de validação.
+
+![Loss de treino e Dice de validação por época](docs/curves.png)
 
 Figuras em `outputs/`: `curves.png`, `ratio_scatter.png`, `best_worst.png`, `ratio_boxplot.png`.
 
